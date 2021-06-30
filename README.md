@@ -1,6 +1,35 @@
-# Hello, World Tutorial
+# Hello, World
 
-## 1. A Simple Network
+This is a work in progress. Experimenting with the idea of a simple, Hello, World flavored stack that someone could standup and have a base understanding of in a single day.
+
+## WIP Notes
+
+Topics to cover in the simple stack:
+
+* Frontmatter
+  * terraform.tf: AWS provider
+* VPC: `terraform-aws-modules/vpc/aws`
+* ACM: `trussworks/acm-cert/aws`
+* ALB: `trussworks/alb-web-containers/aws`
+* DNS: route53 resource records
+* ECS: `trussworks/ecs-service/aws`
+
+Dependency relation: (DNS, ECS) -> ALB -> (VPC, ACM)
+
+Directions we can head to extend things:
+
+* Remove hardcoded values (like names) and parameterize them into locals/variables.
+* Enable ALB access logs.
+* Pull something out of ParamterStore or DynamoDB.
+* Add a database.
+
+Directions we can head to dissect things:
+
+* Go through all the resources created by each module
+* Build simplified versions of the modules from scratch
+* Dive into various topics we glossed over
+
+## A Simple Network
 
 The network is one of the first things you'll create when setting up the infrastructure for a new application. The network is where data moves between the internet and the app and the app and any services it needs (e.g., an internal database). The network is one of the primary ways to control access to hosts and services. For example, while the world should be able to reach our application, only the application should be able to directly talk to the database.
 
