@@ -1,8 +1,12 @@
 # Hello, World
 
-This is a work in progress. Experimenting with the idea of a simple, Hello, World flavored stack that someone could standup and have a base understanding of in a single day.
+This is a work in progress.
 
 ## WIP Notes
+
+This section is internal notes. Tutorial begins in the next section: [#Network](#network).
+
+Experimenting with the idea of a simple, Hello, World flavored stack that someone could standup and have a base understanding of in a single day.
 
 Topics to cover in the simple stack:
 
