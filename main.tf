@@ -7,23 +7,16 @@ provider "aws" {
 #
 
 module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 2.64.0"
+  source = "terraform-aws-modules/vpc/aws"
 
-  name = "hello-brainsik"
-  cidr = "10.0.0.0/16"
+  name = "hello"
+  cidr = "10.10.0.0/16"
 
-  azs             = ["us-west-2a", "us-west-2b"]
-  private_subnets = ["10.0.10.0/24", "10.0.11.0/24"]
-  public_subnets  = ["10.0.20.0/24", "10.0.21.0/24"]
+  azs             = ["us-west-2a"]
+  private_subnets = ["10.10.10.0/24"]
+  public_subnets  = ["10.10.20.0/24"]
 
   enable_nat_gateway = true
-  single_nat_gateway = true
-
-  tags = {
-    Automation  = "Terraform"
-    Environment = "brainsik"
-  }
 }
 
 #
@@ -32,21 +25,19 @@ module "vpc" {
 
 # TLS certificate
 module "alb_tls_cert" {
-  source  = "trussworks/acm-cert/aws"
-  version = "~> 3.0.2"
+  source = "trussworks/acm-cert/aws"
 
   domain_name = "hello.sandbox.truss.coffee"
   zone_name   = "sandbox.truss.coffee"
 
-  environment = "brainsik"
+  environment = "sandbox"
 }
 
 module "alb" {
-  source = "/Users/brainsik/src/trussworks/terraform-aws-alb-web-containers"
-  # version = "5.1.1"
+  source = "trussworks/alb-web-containers/aws"
 
   name        = "hello"
-  environment = "brainsik"
+  environment = "sandbox"
 
   alb_vpc_id                  = module.vpc.vpc_id
   alb_subnet_ids              = module.vpc.public_subnets
@@ -62,13 +53,13 @@ module "alb" {
 # 3. DNS
 #
 
-data "aws_route53_zone" "sandbox" {
+data "aws_route53_zone" "main" {
   name = "sandbox.truss.coffee"
 }
 
 resource "aws_route53_record" "main" {
   name    = "hello"
-  zone_id = data.aws_route53_zone.sandbox.zone_id
+  zone_id = data.aws_route53_zone.main.zone_id
   type    = "A"
 
   alias {
@@ -83,20 +74,14 @@ resource "aws_route53_record" "main" {
 #
 
 resource "aws_ecs_cluster" "main" {
-  name = "hello-brainsik"
-
-  tags = {
-    Automation  = "Terraform"
-    Environment = "brainsik"
-  }
+  name = "hello"
 }
 
 module "ecs-service" {
-  source  = "trussworks/ecs-service/aws"
-  version = "5.1.1"
+  source = "trussworks/ecs-service/aws"
 
   name        = "hello"
-  environment = "brainsik"
+  environment = "sandbox"
 
   ecs_cluster     = aws_ecs_cluster.main
   ecs_use_fargate = true
