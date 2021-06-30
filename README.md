@@ -29,7 +29,7 @@ Directions we can head to dissect things:
 * Build simplified versions of the modules from scratch
 * Dive into various topics we glossed over
 
-## A Simple Network
+## Network
 
 The network is one of the first things you'll create when setting up the infrastructure for a new application. The network is where data moves between the internet and the app and the app and any services it needs (e.g., an internal database). The network is one of the primary ways to control access to hosts and services. For example, while the world should be able to reach our application, only the application should be able to directly talk to the database.
 
@@ -116,3 +116,86 @@ We break apart our network into two pieces: a public subnet where hosts can be r
 ```
 
 Finally, we setup a [NAT gateway](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html). This allows the hosts in our private subnets to reach the internet (e.g., to download packages or reach external services) without exposing them to incoming connections. It's the same as your home LAN where you have a private network all your devices are on, they can reach the internet, but they are not directly exposed to incoming connections.
+
+## Load Balancer
+
+```terraform
+# TLS certificate
+module "alb_tls_cert" {
+  source = "trussworks/acm-cert/aws"
+
+  domain_name = "hello.sandbox.truss.coffee"
+  zone_name   = "sandbox.truss.coffee"
+
+  environment = "sandbox"
+}
+
+module "alb" {
+  source = "trussworks/alb-web-containers/aws"
+
+  name        = "hello"
+  environment = "sandbox"
+
+  alb_vpc_id                  = module.vpc.vpc_id
+  alb_subnet_ids              = module.vpc.public_subnets
+  alb_default_certificate_arn = module.alb_tls_cert.acm_arn
+
+  container_port     = 8080
+  container_protocol = "HTTP"
+
+  logs_s3_bucket = ""
+}
+```
+
+## DNS
+
+```terraform
+data "aws_route53_zone" "main" {
+  name = "sandbox.truss.coffee"
+}
+
+resource "aws_route53_record" "main" {
+  name    = "hello"
+  zone_id = data.aws_route53_zone.main.zone_id
+  type    = "A"
+
+  alias {
+    name                   = module.alb.alb_dns_name
+    zone_id                = module.alb.alb_zone_id
+    evaluate_target_health = false
+  }
+}
+```
+
+## Container
+
+```terraform
+resource "aws_ecs_cluster" "main" {
+  name = "hello"
+}
+
+module "ecs-service" {
+  source = "trussworks/ecs-service/aws"
+
+  name        = "hello"
+  environment = "sandbox"
+
+  ecs_cluster     = aws_ecs_cluster.main
+  ecs_use_fargate = true
+
+  ecs_vpc_id     = module.vpc.vpc_id
+  ecs_subnet_ids = module.vpc.private_subnets
+
+  associate_alb      = true
+  alb_security_group = module.alb.alb_security_group_id
+  lb_target_groups = [
+    {
+      container_port              = 8080
+      container_health_check_port = 8080
+      lb_target_group_arn         = module.alb.alb_target_group_id
+    }
+  ]
+
+  kms_key_id = null
+}
+```
