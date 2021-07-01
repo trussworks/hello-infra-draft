@@ -111,7 +111,17 @@ NOTE: The mapping between AZs and physical datacenters is defined by AWS per acc
   public_subnets  = ["10.10.20.0/24"]
 ```
 
-We break apart our network into two pieces: a public subnet where hosts can be reached directly from the internet and a private subnet which only allows internal communication. We use `/24` subnets for simplicity: 10.10.10.x and 10.10.20.y are the available addresses. In a production environment, we'd likely use larger subnets to give more room to grow.
+We divide the network into public and private address spaces. Network subdivision are called a subnets. Hosts that need to be reachable from the internet will get an address from the public subnet and everything else will get an address from the private subnet.
+
+Subnets are tied to AZs. This means every AZ will need its own public and private subnet. Since we're using one AZ, we define two subnets. We use `/24` subnets for simplicity: 10.10.10.x and 10.10.20.y are the available addresses. In a production environment, we'd likely use larger subnets to give more room to grow.
+
+If we were using two AZs, we'd need 4 subnets (2 private, 2 public). Here's an example:
+
+```terraform
+  azs             = ["us-west-2a", "us-west-2b"]
+  private_subnets = ["10.10.10.0/24", "10.10.11.0/24"]
+  public_subnets  = ["10.10.20.0/24", "10.10.21.0/24"]
+```
 
 ### The gateway
 
