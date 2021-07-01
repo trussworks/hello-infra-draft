@@ -138,7 +138,7 @@ The load balancer[^alb] receives HTTP requests from the internet, sends them to 
 
 We will not even entertain the notion of serving our application over an unencrypted connection. With services like AWS Certificate Manager (ACM)[^acm] and Let's Encrypt making it easy to both provision and rotate TLS certificates, it's an act of negligence to do otherwise. Our service will be visited at `https://hello.sandbox.truss.coffee`.
 
-Here's the Terraform code for provisioning a TLS cert with AWS ACM
+Here's the Terraform code for provisioning a TLS cert with AWS ACM:
 
 ```terraform
 # TLS certificate
@@ -187,6 +187,8 @@ Not actually needed for making certificates, the TrussWorks module requires we p
 
 ### The load balancer
 
+Now that we have a TLS cert, it's time to create the load balancer:
+
 ```terraform
 module "alb" {
   source = "trussworks/alb-web-containers/aws"
@@ -203,6 +205,49 @@ module "alb" {
 
   logs_s3_bucket = ""
 }
+```
+
+Let's go through it.
+
+#### The module
+
+```terraform
+module "alb" {
+  source = "trussworks/alb-web-containers/aws"
+```
+
+We use the [TrussWorks alb-web-containers module](https://registry.terraform.io/modules/trussworks/alb-web-containers/aws/latest). This will take care of setting up the network, configure port 80 (HTTP) to redirect to 443 (HTTPS), attach our TLS certificate, and tell the balancer how to talk to the container with our running app.
+
+NOTE: AWS offers a few different types of load balancers: ALB (application load balancer), NLB (network load balancer), and ELB (elastic load balancer also known as "classic load balancer"). In general, you'll be working with ALBs. NLBs get used when your app needs more control over the network protocol. Avoid using ELBs (the previous generation of load balancer).
+
+#### The namespace
+
+```terraform
+  name        = "hello"
+  environment = "sandbox"
+```
+
+Similar to when we configured the VPC, we need a unique name for our AL
+
+#### The network config
+
+```terraform
+  alb_vpc_id                  = module.vpc.vpc_id
+  alb_subnet_ids              = module.vpc.public_subnets
+  alb_default_certificate_arn = module.alb_tls_cert.acm_arn
+```
+
+#### The container config
+
+```terraform
+  container_port     = 8080
+  container_protocol = "HTTP"
+```
+
+#### Logging
+
+```terraform
+  logs_s3_bucket = ""
 ```
 
 ## DNS
